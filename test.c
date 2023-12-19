@@ -23,13 +23,13 @@
 #define T_RED 7
 #define GAME_OVER_COLOR 8
 
-struct Snake {
+typedef struct {
 	int tail, head;
 	int pos_i[MAX_SNAKE_LENGTH], pos_j[MAX_SNAKE_LENGTH];
 	int length;
 	char direction;
 	char head_char, body_char;
-};
+}Snake;
 
 void init_data(char data[][COL+1]);
 void init_screen(char data[][COL+1]);
@@ -207,7 +207,11 @@ char get_input(char curr) {
         if(input == ERR) // no input, return last 
             return last;
         else if(input != last) { // input set a new direction
-            if(input == 'a' || input == 'w' || input == 's' || input == 'd' || input == 'q')
+            if(input == 'a' && last != 'd' 
+				|| input == 'w' && last != 's'
+				|| input == 's' && last != 'w'
+				|| input == 'd' && last != 'a'
+				|| input == 'q')
                 return input;
         }
         // input didn't set a new direction, continue the loop to clean the input
