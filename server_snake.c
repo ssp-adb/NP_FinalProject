@@ -202,7 +202,8 @@ int main(int argc, char ** argv) {
             for(i = 0; i < MAX_CLINETS; i++){
                 if(waiting_clients[i].skt < 0){
                     waiting_clients[i] = new_cli;
-                    //write(waiting_clients[i].skt, "okay\n", 5);
+                    write(waiting_clients[i].skt, "okay\n", 5);
+                    write(waiting_clients[i].skt, "okay\n", 5);
                     break;
                 }
             }
@@ -222,9 +223,12 @@ int main(int argc, char ** argv) {
         }
 
         for (i = 0; i <= maxi; i++){ // check all clients for yes/no
-            if((sockfd = waiting_clients[i].skt) < 0) continue;
+            if((sockfd = waiting_clients[i].skt) < 0) {
+                continue;
+            }
             
             if(FD_ISSET(sockfd, &rset)){
+				write(sockfd, "yes/no?\n", 8);
                 if((n = read(sockfd, buf, MAXLINE)) == 0){ //connection reset
                     close(sockfd);
                     FD_CLR(sockfd, &allset);
@@ -232,89 +236,44 @@ int main(int argc, char ** argv) {
                 }
                 else{
                     buf[n]=0;
-                    //if(strcmp(buf, "yes")==0){
-                    if(ready_cli.skt == -1){
-                        ready_cli = waiting_clients[i];
-                        waiting_clients[i].skt = -1;
+                    if(strcmp(buf, "yes\n\n")==0){
+                        if(ready_cli.skt == -1){
+                            ready_cli = waiting_clients[i];
+                            waiting_clients[i].skt = -1;
 
-                        // send first msg
-                        strcpy(usr_msg, "You are the 1st user. Wait for the second one!\n");
-                        write(ready_cli.skt, usr_msg, strlen(usr_msg));
-                    }
-                    else{
-                        sprintf(usr_msg, "The second user is %s from %s\n", waiting_clients[i].id, waiting_clients[i].ip_addr);
-                        write(ready_cli.skt, usr_msg, strlen(usr_msg));
-                        // send second msg
-                        strcpy(usr_msg, "You are the 2nd user\n");
-                        write(waiting_clients[i].skt, usr_msg, strlen(usr_msg));
-                        sprintf(usr_msg, "The first user is %s from %s\n", ready_cli.id, ready_cli.ip_addr);
-                        write(waiting_clients[i].skt, usr_msg, strlen(usr_msg));
-
-                        if((childpid = fork()) == 0){ //child process
-                            close(listenfd);
-                            chat(ready_cli, waiting_clients[i]);
-
-                            exit(0); // finish application
+                            // send first msg
+                            strcpy(usr_msg, "You are the 1st user. Wait for the second one!\n");
+                            write(ready_cli.skt, usr_msg, strlen(usr_msg));
                         }
-                        /* parent closes connected socket */
-                        close(ready_cli.skt);
-                        FD_CLR(ready_cli.skt, &allset);
-                        ready_cli.skt = -1;
-                        close(waiting_clients[i].skt);
-                        FD_CLR(waiting_clients[i].skt, &allset);
-                        waiting_clients[i].skt = -1;
+                        else{
+                            sprintf(usr_msg, "The second user is %s from %s\n", waiting_clients[i].id, waiting_clients[i].ip_addr);
+                            write(ready_cli.skt, usr_msg, strlen(usr_msg));
+                            // send second msg
+                            strcpy(usr_msg, "You are the 2nd user\n");
+                            write(waiting_clients[i].skt, usr_msg, strlen(usr_msg));
+                            sprintf(usr_msg, "The first user is %s from %s\n", ready_cli.id, ready_cli.ip_addr);
+                            write(waiting_clients[i].skt, usr_msg, strlen(usr_msg));
+
+                            if((childpid = fork()) == 0){ //child process
+                                close(listenfd);
+                                chat(ready_cli, waiting_clients[i]);
+
+                                exit(0); // finish application
+                            }
+                            /* parent closes connected socket */
+                            close(ready_cli.skt);
+                            FD_CLR(ready_cli.skt, &allset);
+                            ready_cli.skt = -1;
+                            close(waiting_clients[i].skt);
+                            FD_CLR(waiting_clients[i].skt, &allset);
+                            waiting_clients[i].skt = -1;
+                        }
                     }
-                    //}
                 }
 
                 if (--nready <= 0)
 				    continue;		/* no more readable descriptors */
             }
         }
-        // //get client id
-        // n = read(cli1.skt, cli1.id, MAX_ID_LEN);
-        // cli1.id[n]=0;
-
-        // // send first msg
-        // strcpy(usr_msg, "You are the 1st user. Wait for the second one!\n");
-        // write(cli1.skt, usr_msg, strlen(usr_msg));
-
-        // //====================For 2nd client=======================
-        // clilen = sizeof(cliaddr);
-        // if ((connfd = accept(listenfd, (struct sockaddr*) &cliaddr, & clilen)) < 0) {
-        //     if (errno == EINTR)
-        //         continue; /* back to for() */
-        //     else
-        //         printf("accept error");
-        // }
-        // cli2.skt = connfd;
-
-        // //get ip addr
-        // inet_ntop(AF_INET, & cliaddr.sin_addr, cli2.ip_addr, sizeof(cli2.ip_addr));
-        // printf("client connected from %s:%d\n", cli2.ip_addr, cliaddr.sin_port);
-
-        // //get client id
-        // read(cli2.skt, cli2.id, MAX_ID_LEN);
-        // cli2.id[n]=0;
-
-        // sprintf(usr_msg, "The second user is %s from %s\n", cli2.id, cli2.ip_addr);
-        // write(cli1.skt, usr_msg, strlen(usr_msg));
-
-        // // send second msg
-        // strcpy(usr_msg, "You are the 2nd user\n");
-        // write(cli2.skt, usr_msg, strlen(usr_msg));
-        // sprintf(usr_msg, "The first user is %s from %s\n", cli1.id, cli1.ip_addr);
-        // write(cli2.skt, usr_msg, strlen(usr_msg));
-
-        // if ((childpid = fork()) == 0) {
-        //     /* child process */
-        //     close(listenfd); /* close listening socket */
-
-        //     chat(cli1, cli2);
-
-        //     exit(0);
-        // }
-        // close(cli1.skt); /* parent closes connected socket */
-        // close(cli2.skt);
     }
 }
