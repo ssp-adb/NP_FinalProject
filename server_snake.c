@@ -13,6 +13,7 @@
 #define MAXLINE 512
 #define MAX_ID_LEN 50
 #define MAX_EVENTS 100
+#define MAX_CLINETS 256
 
 void sig_chld(int signo) {
     pid_t pid;
@@ -28,6 +29,8 @@ struct usr {
     char id[MAX_ID_LEN];
     char ip_addr[MAXLINE];
 };
+
+struct usr waiting_clients[MAX_CLINETS];
 
 void app_end(struct usr leave_usr, struct usr cli1, struct usr cli2){
     int n;
@@ -136,14 +139,18 @@ void chat(struct usr cli1, struct usr cli2) {
 }
 
 int main(int argc, char ** argv) {
-    int listenfd, connfd, n, epfd;
+    int listenfd, connfd, n;
+    int i, maxi, maxfdp1, nready, sockfd;
+    fd_set rset, allset;
     pid_t childpid;
     socklen_t clilen;
     struct sockaddr_in cliaddr, servaddr;
-    char usr_msg[1024];
+    char usr_msg[1024], buf[MAXLINE];
     //time_t ticks;
     // FILE * fp;
-    struct usr cli1, cli2;
+    struct usr new_cli;
+    struct usr ready_cli;
+    ready_cli.skt = -1; // initialize
    
     int reuse = 1;
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -159,65 +166,155 @@ int main(int argc, char ** argv) {
 
     signal(SIGCHLD, sig_chld); /* must call waitpid() */
 
-    int cnt=0;
+
+    maxfdp1 = listenfd + 1; // initialize
+    maxi = -1; // index to waiting_clients[] array
+    for (i = 0; i < MAX_CLINETS; i++)
+        waiting_clients[i].skt = -1; // -1 meaning available
+    FD_ZERO(&allset);
+    FD_SET(listenfd, &allset);
     for (;;) {
-        clilen = sizeof(cliaddr);
-        if ((connfd = accept(listenfd, (struct sockaddr*) &cliaddr, &clilen)) < 0) {
-            if (errno == EINTR)
-                continue; /* back to for() */
-            else
-                printf("accept error");
+        rset = allset;
+        nready = select(maxfdp1, &rset, NULL, NULL, NULL);
+
+        if (FD_ISSET(listenfd, &rset)){ // new client connection
+            clilen = sizeof(cliaddr);
+            if ((connfd = accept(listenfd, (struct sockaddr*) &cliaddr, &clilen)) < 0) {
+                if (errno == EINTR)
+                    continue; /* back to for() */
+                else
+                    printf("accept error");
+            }
+            //get socket and store
+            new_cli.skt = connfd;
+
+            //get client ip addr
+            inet_ntop(AF_INET, & cliaddr.sin_addr, new_cli.ip_addr, sizeof(new_cli.ip_addr));
+            printf("client connected from %s:%d\n", new_cli.ip_addr, cliaddr.sin_port);
+
+            //get client id
+            n = read(new_cli.skt, new_cli.id, MAX_ID_LEN);
+            if(n <= 0) {
+                printf("Error read\n");
+            }
+            new_cli.id[n] = 0;
+
+            for(i = 0; i < MAX_CLINETS; i++){
+                if(waiting_clients[i].skt < 0){
+                    waiting_clients[i] = new_cli;
+                    //write(waiting_clients[i].skt, "okay\n", 5);
+                    break;
+                }
+            }
+            if(i == MAX_CLINETS){
+                printf("too many clients\n");
+                return -1;
+            }
+
+            FD_SET(connfd, &allset);	/* add new descriptor to set */
+			if (connfd+1 > maxfdp1)
+				maxfdp1 = connfd + 1;	/* for select */
+			if (i > maxi)
+				maxi = i;				/* max index in waiting_clients array */
+
+			if (--nready <= 0)
+				continue;				/* no more readable descriptors */
         }
-        cli1.skt = connfd;
 
-        //get ip addr
-        inet_ntop(AF_INET, & cliaddr.sin_addr, cli1.ip_addr, sizeof(cli1.ip_addr));
-        printf("client connected from %s:%d\n", cli1.ip_addr, cliaddr.sin_port);
+        for (i = 0; i <= maxi; i++){ // check all clients for yes/no
+            if((sockfd = waiting_clients[i].skt) < 0) continue;
+            
+            if(FD_ISSET(sockfd, &rset)){
+                if((n = read(sockfd, buf, MAXLINE)) == 0){ //connection reset
+                    close(sockfd);
+                    FD_CLR(sockfd, &allset);
+                    waiting_clients[i].skt = -1;
+                }
+                else{
+                    buf[n]=0;
+                    //if(strcmp(buf, "yes")==0){
+                    if(ready_cli.skt == -1){
+                        ready_cli = waiting_clients[i];
+                        waiting_clients[i].skt = -1;
 
-        //get client id
-        n = read(cli1.skt, cli1.id, MAX_ID_LEN);
-        cli1.id[n]=0;
+                        // send first msg
+                        strcpy(usr_msg, "You are the 1st user. Wait for the second one!\n");
+                        write(ready_cli.skt, usr_msg, strlen(usr_msg));
+                    }
+                    else{
+                        sprintf(usr_msg, "The second user is %s from %s\n", waiting_clients[i].id, waiting_clients[i].ip_addr);
+                        write(ready_cli.skt, usr_msg, strlen(usr_msg));
+                        // send second msg
+                        strcpy(usr_msg, "You are the 2nd user\n");
+                        write(waiting_clients[i].skt, usr_msg, strlen(usr_msg));
+                        sprintf(usr_msg, "The first user is %s from %s\n", ready_cli.id, ready_cli.ip_addr);
+                        write(waiting_clients[i].skt, usr_msg, strlen(usr_msg));
 
-        // send first msg
-        strcpy(usr_msg, "You are the 1st user. Wait for the second one!\n");
-        write(cli1.skt, usr_msg, strlen(usr_msg));
+                        if((childpid = fork()) == 0){ //child process
+                            close(listenfd);
+                            chat(ready_cli, waiting_clients[i]);
 
-        //====================For 2nd client=======================
-        clilen = sizeof(cliaddr);
-        if ((connfd = accept(listenfd, (struct sockaddr*) &cliaddr, & clilen)) < 0) {
-            if (errno == EINTR)
-                continue; /* back to for() */
-            else
-                printf("accept error");
+                            exit(0); // finish application
+                        }
+                        /* parent closes connected socket */
+                        close(ready_cli.skt);
+                        FD_CLR(ready_cli.skt, &allset);
+                        ready_cli.skt = -1;
+                        close(waiting_clients[i].skt);
+                        FD_CLR(waiting_clients[i].skt, &allset);
+                        waiting_clients[i].skt = -1;
+                    }
+                    //}
+                }
+
+                if (--nready <= 0)
+				    continue;		/* no more readable descriptors */
+            }
         }
-        cli2.skt = connfd;
+        // //get client id
+        // n = read(cli1.skt, cli1.id, MAX_ID_LEN);
+        // cli1.id[n]=0;
 
-        //get ip addr
-        inet_ntop(AF_INET, & cliaddr.sin_addr, cli2.ip_addr, sizeof(cli2.ip_addr));
-        printf("client connected from %s:%d\n", cli2.ip_addr, cliaddr.sin_port);
+        // // send first msg
+        // strcpy(usr_msg, "You are the 1st user. Wait for the second one!\n");
+        // write(cli1.skt, usr_msg, strlen(usr_msg));
 
-        //get client id
-        read(cli2.skt, cli2.id, MAX_ID_LEN);
-        cli2.id[n]=0;
+        // //====================For 2nd client=======================
+        // clilen = sizeof(cliaddr);
+        // if ((connfd = accept(listenfd, (struct sockaddr*) &cliaddr, & clilen)) < 0) {
+        //     if (errno == EINTR)
+        //         continue; /* back to for() */
+        //     else
+        //         printf("accept error");
+        // }
+        // cli2.skt = connfd;
 
-        sprintf(usr_msg, "The second user is %s from %s\n", cli2.id, cli2.ip_addr);
-        write(cli1.skt, usr_msg, strlen(usr_msg));
+        // //get ip addr
+        // inet_ntop(AF_INET, & cliaddr.sin_addr, cli2.ip_addr, sizeof(cli2.ip_addr));
+        // printf("client connected from %s:%d\n", cli2.ip_addr, cliaddr.sin_port);
 
-        // send second msg
-        strcpy(usr_msg, "You are the 2nd user\n");
-        write(cli2.skt, usr_msg, strlen(usr_msg));
-        sprintf(usr_msg, "The first user is %s from %s\n", cli1.id, cli1.ip_addr);
-        write(cli2.skt, usr_msg, strlen(usr_msg));
+        // //get client id
+        // read(cli2.skt, cli2.id, MAX_ID_LEN);
+        // cli2.id[n]=0;
 
-        if ((childpid = fork()) == 0) {
-            /* child process */
-            close(listenfd); /* close listening socket */
+        // sprintf(usr_msg, "The second user is %s from %s\n", cli2.id, cli2.ip_addr);
+        // write(cli1.skt, usr_msg, strlen(usr_msg));
 
-            chat(cli1, cli2);
+        // // send second msg
+        // strcpy(usr_msg, "You are the 2nd user\n");
+        // write(cli2.skt, usr_msg, strlen(usr_msg));
+        // sprintf(usr_msg, "The first user is %s from %s\n", cli1.id, cli1.ip_addr);
+        // write(cli2.skt, usr_msg, strlen(usr_msg));
 
-            exit(0);
-        }
-        close(cli1.skt); /* parent closes connected socket */
-        close(cli2.skt);
+        // if ((childpid = fork()) == 0) {
+        //     /* child process */
+        //     close(listenfd); /* close listening socket */
+
+        //     chat(cli1, cli2);
+
+        //     exit(0);
+        // }
+        // close(cli1.skt); /* parent closes connected socket */
+        // close(cli2.skt);
     }
 }
