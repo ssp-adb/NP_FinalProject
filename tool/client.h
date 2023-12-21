@@ -1,7 +1,7 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include "snake_component.h"
+#include "./component/snake_component.h"
 
 void init_screen();
 char get_input(char last);
