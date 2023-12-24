@@ -96,7 +96,7 @@ bool collision_snake(Snake* snake1, Snake* snake2, char data[][COL+1]) {
 	for(int i = snake2->tail; i != snake2->head; i = (i+1)%MAX_SNAKE_LENGTH) {
 		if(snake1->pos_i[snake1->head] == snake2->pos_i[i] && snake1->pos_j[snake1->head] == snake2->pos_j[i]) {
 			// modify data to show the collision
-			data[snake1->pos_i[snake1->head]][snake1->pos_j[snake1->head]] = 'X';
+			data[snake1->pos_i[snake1->head]][snake1->pos_j[snake1->head]] = snake2->body_char;
 			return 1;
 		}
 	}
