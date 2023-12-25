@@ -9,6 +9,7 @@
 #include <sys/epoll.h>
 #include <errno.h>
 #include <unistd.h>
+#include <tool/snake_server.h>
 
 #define MAXLINE 512
 #define MAX_ID_LEN 50
@@ -65,9 +66,92 @@ void app_end(struct usr leave_usr, struct usr cli1, struct usr cli2){
     }
 }
 
+typedef struct {
+    char data[ROW+1][COL+1];
+    int fruit_eaten;
+} send_info;
+
+void snake_game(struct usr cli1, struct usr cli2){
+    // game initialize
+    srand(time(NULL));
+
+    int fruit_eaten_1 = 0, fruit_eaten_2 = 0;
+    int winner = 0;
+    char data[ROW+1][COL+1] = {0};
+    Snake snake1, snake2;
+
+    init_data(data);
+    Init_snake(&snake1, &snake2, data);
+
+    // communicate with clients
+    int epfd, connfd, n;
+    char input[MAXLINE];
+
+    struct epoll_event ev;
+    struct epoll_event *events = (struct epoll_event*) malloc(sizeof(struct epoll_event) * MAX_EVENTS);
+
+    epfd = epoll_create(MAX_EVENTS);
+
+    // 1st client
+    ev.events = EPOLLIN;
+    ev.data.fd = cli1.skt;
+    epoll_ctl(epfd, EPOLL_CTL_ADD, cli1.skt, &ev);
+    
+    // 2nd client
+    ev.data.fd = cli2.skt;
+    epoll_ctl(epfd, EPOLL_CTL_ADD, cli2.skt, &ev);
+
+    // running server and game
+    for(;;){
+        while(!winner){ // if winner NOT come out yet
+            // timeout maybe necessary!!!
+            int nfds = epoll_wait(epfd, events, MAX_EVENTS, -1);
+            for(int i = 0; i < nfds; i++){
+                connfd = events[i].data.fd;
+                if(events[i].events & EPOLLIN){
+                    if(connfd == cli1.skt){
+                        // get input
+                        recv(cli1.skt, input, MAXLINE, 0);
+                        snake1.direction = get_input(input);
+                    }
+                    else if(connfd == cli2.skt){
+                        recv(cli2.skt, input, MAXLINE, 0);
+                        snake2.direction = get_input(input);
+                    }
+                }
+            }
+            if(snake1.direction == 'q'){
+                winner = 3;
+                break;
+            }
+            if(winner = update_snake(&snake1, &snake2, data))
+                break;
+            if(winner = Check_win(&snake1, &snake2))
+                break;
+            fruit_eaten_1 = snake1.length-3;
+            fruit_eaten_2 = snake2.length-3;
+
+            send_info *cli1_info, *cli2_info;
+            // copying data
+            for(int i = 0; i <= ROW; i++) {
+                for(int j = 0; j <= COL; j++) {
+                    cli1_info->data[i][j] = data[i][j];
+                    cli2_info->data[i][j] = data[i][j];
+                }
+            }
+            cli1_info->fruit_eaten = fruit_eaten_1;
+            cli2_info->fruit_eaten = fruit_eaten_2;
+            // sending data to client
+            send(cli1.skt, (void *)cli1_info, sizeof(send_info), 0);
+            send(cli2.skt, (void *)cli2_info, sizeof(send_info), 0);
+
+            usleep(100000);
+        }
+    }
+}
+
 void chat(struct usr cli1, struct usr cli2) {
-    int epfd, connfd, n, maxfdp1;
-    fd_set rset;
+    int epfd, connfd, n;
     char buf[MAXLINE], fir2sec_msg[1024], sec2fir_msg[1024];
     char leave_msg[1024];
     struct usr leave_usr;
@@ -256,7 +340,8 @@ int main(int argc, char ** argv) {
 
                             if((childpid = fork()) == 0){ //child process
                                 close(listenfd);
-                                chat(ready_cli, waiting_clients[i]);
+                                snake_game(ready_cli, waiting_clients[i]);
+                                //chat(ready_cli, waiting_clients[i]);
 
                                 exit(0); // finish application
                             }
