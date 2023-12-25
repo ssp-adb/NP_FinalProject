@@ -26,8 +26,12 @@ int main(int argc, char **argv){
     printf("Welcome to snake game!\nPlease input your name: ");
     char name[50];
     memset(name, 0, sizeof(name));
-    size_t len = 50;
-    getline(&name, &len, stdin);
+    scanf("%s", name);
+
+    /*
+    printf("%s", name);
+    fflush(stdout);
+    */
 
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in server_addr;
