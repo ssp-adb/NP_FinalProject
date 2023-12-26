@@ -86,6 +86,7 @@ void snake_game(struct usr cli1, struct usr cli2){
     // communicate with clients
     int epfd, connfd, n;
     char input[MAXLINE];
+    send_info *cli1_info, *cli2_info;
 
     struct epoll_event ev;
     struct epoll_event *events = (struct epoll_event*) malloc(sizeof(struct epoll_event) * MAX_EVENTS);
@@ -102,52 +103,65 @@ void snake_game(struct usr cli1, struct usr cli2){
     epoll_ctl(epfd, EPOLL_CTL_ADD, cli2.skt, &ev);
 
     // running server and game
-    for(;;){
-        while(!winner){ // if winner NOT come out yet
-            // timeout maybe necessary!!!
-            int nfds = epoll_wait(epfd, events, MAX_EVENTS, -1);
+    while(!winner){ // if winner NOT come out yet
+        // timeout maybe necessary!!!
+        int nfds = epoll_wait(epfd, events, MAX_EVENTS, 100);
+        if(nfds < 0 && errno == EINTR) printf("timeout (0.1s)\n");
+        else{
             for(int i = 0; i < nfds; i++){
                 connfd = events[i].data.fd;
                 if(events[i].events & EPOLLIN){
                     if(connfd == cli1.skt){
-                        // get input
-                        recv(cli1.skt, input, MAXLINE, 0);
+                        // get input (non blocking)
+                        recv(cli1.skt, input, MAXLINE, MSG_DONTWAIT);
                         snake1.direction = get_input(input);
                     }
                     else if(connfd == cli2.skt){
-                        recv(cli2.skt, input, MAXLINE, 0);
+                        recv(cli2.skt, input, MAXLINE, MSG_DONTWAIT);
                         snake2.direction = get_input(input);
                     }
                 }
             }
-            if(snake1.direction == 'q'){
-                winner = 3;
-                break;
-            }
-            if(winner = update_snake(&snake1, &snake2, data))
-                break;
-            if(winner = Check_win(&snake1, &snake2))
-                break;
-            fruit_eaten_1 = snake1.length-3;
-            fruit_eaten_2 = snake2.length-3;
-
-            send_info *cli1_info, *cli2_info;
-            // copying data
-            for(int i = 0; i <= ROW; i++) {
-                for(int j = 0; j <= COL; j++) {
-                    cli1_info->data[i][j] = data[i][j];
-                    cli2_info->data[i][j] = data[i][j];
-                }
-            }
-            cli1_info->fruit_eaten = fruit_eaten_1;
-            cli2_info->fruit_eaten = fruit_eaten_2;
-            // sending data to client
-            send(cli1.skt, (void *)cli1_info, sizeof(send_info), 0);
-            send(cli2.skt, (void *)cli2_info, sizeof(send_info), 0);
-
-            usleep(100000);
         }
+        if(snake1.direction == 'q'){
+            winner = 3;
+            break;
+        }
+        if(winner = update_snake(&snake1, &snake2, data))
+            break;
+        if(winner = Check_win(&snake1, &snake2))
+            break;
+        fruit_eaten_1 = snake1.length-3;
+        fruit_eaten_2 = snake2.length-3;
+
+        // copying data
+        for(int i = 0; i <= ROW; i++) {
+            for(int j = 0; j <= COL; j++) {
+                cli1_info->data[i][j] = data[i][j];
+                cli2_info->data[i][j] = data[i][j];
+            }
+        }
+        cli1_info->fruit_eaten = fruit_eaten_1;
+        cli2_info->fruit_eaten = fruit_eaten_2;
+        // sending data to client
+        send(cli1.skt, (void *)cli1_info, sizeof(send_info), MSG_DONTWAIT);
+        send(cli2.skt, (void *)cli2_info, sizeof(send_info), MSG_DONTWAIT);
+
+        //usleep(100000);
     }
+
+    // copying data
+        for(int i = 0; i <= ROW; i++) {
+            for(int j = 0; j <= COL; j++) {
+                cli1_info->data[i][j] = data[i][j];
+                cli2_info->data[i][j] = data[i][j];
+            }
+        }
+        cli1_info->fruit_eaten = fruit_eaten_1;
+        cli2_info->fruit_eaten = fruit_eaten_2;
+    // blocking output
+    send(cli1.skt, (void *)cli1_info, sizeof(send_info), 0);
+    send(cli2.skt, (void *)cli2_info, sizeof(send_info), 0);
 }
 
 void chat(struct usr cli1, struct usr cli2) {
