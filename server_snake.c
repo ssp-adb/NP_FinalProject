@@ -121,7 +121,6 @@ void snake_game(struct usr cli1, struct usr cli2){
 
     // running server and game
     while(!winner){ // if winner NOT come out yet
-        // timeout maybe necessary!!!
         int nfds = epoll_wait(epfd, events, MAX_EVENTS, 100);
         if(nfds < 0 && errno == EINTR) printf("timeout (0.1s)\n");
         else{
@@ -130,12 +129,30 @@ void snake_game(struct usr cli1, struct usr cli2){
                 if(events[i].events & EPOLLIN){
                     if(connfd == cli1.skt){
                         // get input (non blocking)
-                        recv(cli1.skt, input, MAXLINE, MSG_DONTWAIT);
-                        snake1.direction = get_input(input);
+                        if((n = recv(cli1.skt, input, MAXLINE, MSG_DONTWAIT)) <= 0){
+                            if(errno == EAGAIN || errno == EWOULDBLOCK){
+                                //non-blocking recv nothing, maintain original direction
+                                break; 
+                            }
+                            else if(n==0){
+                                //client 1 leaves game in other ways
+                                snake1.direction = 'q';
+                            }
+                        }
+                        else snake1.direction = get_input(input);
                     }
                     else if(connfd == cli2.skt){
-                        recv(cli2.skt, input, MAXLINE, MSG_DONTWAIT);
-                        snake2.direction = get_input(input);
+                        if((n = recv(cli2.skt, input, MAXLINE, MSG_DONTWAIT)) <= 0){
+                            if(errno == EAGAIN || errno == EWOULDBLOCK){
+                                //non-blocking recv nothing, maintain original direction
+                                break; 
+                            }
+                            else if(n==0){
+                                //client 1 leaves game in other ways
+                                snake2.direction = 'q';
+                            }
+                        }
+                        else snake2.direction = get_input(input);
                     }
                 }
             }
