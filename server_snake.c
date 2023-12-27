@@ -151,14 +151,14 @@ void snake_game(struct usr cli1, struct usr cli2){
     }
 
     // copying data
-        for(int i = 0; i <= ROW; i++) {
-            for(int j = 0; j <= COL; j++) {
-                cli1_info->data[i][j] = data[i][j];
-                cli2_info->data[i][j] = data[i][j];
-            }
+    for(int i = 0; i <= ROW; i++) {
+        for(int j = 0; j <= COL; j++) {
+            cli1_info->data[i][j] = data[i][j];
+            cli2_info->data[i][j] = data[i][j];
         }
-        cli1_info->fruit_eaten = fruit_eaten_1;
-        cli2_info->fruit_eaten = fruit_eaten_2;
+    }
+    cli1_info->fruit_eaten = -1;
+    cli2_info->fruit_eaten = -1;
     // blocking output
     send(cli1.skt, (void *)cli1_info, sizeof(send_info), 0);
     send(cli2.skt, (void *)cli2_info, sizeof(send_info), 0);
