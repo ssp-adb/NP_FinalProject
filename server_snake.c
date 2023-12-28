@@ -74,7 +74,7 @@ typedef struct {
 } send_info;
 
 send_info *create_info(char dt[ROW+1][COL+1], int f_e, int e_e, int winner){
-    send_info *tmp_info;
+    send_info *tmp_info = malloc(sizeof(send_info));
     // copying data
     for(int i = 0; i <= ROW; i++) {
         for(int j = 0; j <= COL; j++) {
@@ -139,7 +139,7 @@ void snake_game(struct usr cli1, struct usr cli2){
                                 snake1.direction = 'q';
                             }
                         }
-                        else snake1.direction = get_input(input);
+                        else snake1.direction = get_input(input[0]);
                     }
                     else if(connfd == cli2.skt){
                         if((n = recv(cli2.skt, input, MAXLINE, MSG_DONTWAIT)) <= 0){
@@ -152,7 +152,7 @@ void snake_game(struct usr cli1, struct usr cli2){
                                 snake2.direction = 'q';
                             }
                         }
-                        else snake2.direction = get_input(input);
+                        else snake2.direction = get_input(input[0]);
                     }
                 }
             }
@@ -251,7 +251,6 @@ int main(int argc, char ** argv) {
                 if(waiting_clients[i].skt < 0){
                     waiting_clients[i] = new_cli;
                     write(waiting_clients[i].skt, "okay\n", 5);
-                    write(waiting_clients[i].skt, "okay\n", 5);
                     break;
                 }
             }
@@ -276,7 +275,8 @@ int main(int argc, char ** argv) {
             }
             
             if(FD_ISSET(sockfd, &rset)){
-				write(sockfd, "yes/no?\n", 8);
+				//write(sockfd, "yes/no?\n", 8);
+                // check YES or exit
                 if((n = read(sockfd, buf, MAXLINE)) == 0){ //connection reset
                     close(sockfd);
                     FD_CLR(sockfd, &allset);
