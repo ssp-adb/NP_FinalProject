@@ -36,10 +36,10 @@ char get_input(char last) {
         if(input == ERR) // no input 
             return last;
         else if(input != last) { // input set a new direction
-            if(input == 'a' && last != 'd' 
-				|| input == 'w' && last != 's'
-				|| input == 's' && last != 'w'
-				|| input == 'd' && last != 'a'
+            if((input == 'a' && last != 'd') 
+				|| (input == 'w' && last != 's')
+				|| (input == 's' && last != 'w')
+				|| (input == 'd' && last != 'a')
 				|| input == 'q')
                 return input;
         }
