@@ -284,23 +284,24 @@ int main(int argc, char ** argv) {
                 }
                 else{
                     buf[n]=0;
-                    if(strcmp(buf, "yes\n\n")==0){
-                        if(ready_cli.skt == -1){
+                    //printf("%s\n", buf);
+                    if(strcmp(buf, "yes\n")==0){
+                        if(ready_cli.skt == -1){ // first client has not come yet
                             ready_cli = waiting_clients[i];
                             waiting_clients[i].skt = -1;
 
                             // send first msg
-                            strcpy(usr_msg, "You are the 1st user. Wait for the second one!\n");
-                            send(ready_cli.skt, usr_msg, strlen(usr_msg), 0);
+                            // strcpy(usr_msg, "You are the 1st user. Wait for the second one!\n");
+                            // send(ready_cli.skt, usr_msg, strlen(usr_msg), 0);
                         }
                         else{
-                            sprintf(usr_msg, "The second user is %s from %s\n", waiting_clients[i].id, waiting_clients[i].ip_addr);
-                            send(ready_cli.skt, usr_msg, strlen(usr_msg), 0);
-                            // send second msg
-                            strcpy(usr_msg, "You are the 2nd user\n");
-                            send(waiting_clients[i].skt, usr_msg, strlen(usr_msg), 0);
-                            sprintf(usr_msg, "The first user is %s from %s\n", ready_cli.id, ready_cli.ip_addr);
-                            send(waiting_clients[i].skt, usr_msg, strlen(usr_msg), 0);
+                            // sprintf(usr_msg, "The second user is %s from %s\n", waiting_clients[i].id, waiting_clients[i].ip_addr);
+                            // send(ready_cli.skt, usr_msg, strlen(usr_msg), 0);
+                            // // send second msg
+                            // strcpy(usr_msg, "You are the 2nd user\n");
+                            // send(waiting_clients[i].skt, usr_msg, strlen(usr_msg), 0);
+                            // sprintf(usr_msg, "The first user is %s from %s\n", ready_cli.id, ready_cli.ip_addr);
+                            // send(waiting_clients[i].skt, usr_msg, strlen(usr_msg), 0);
 
                             if((childpid = fork()) == 0){ //child process
                                 close(listenfd);
