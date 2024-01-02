@@ -1,18 +1,13 @@
-# Makefile
-# not work now
-
 CC = gcc
-CFLAGS = -Wall -g
-DEPS = tool/snake_client.h
-OBJ = client_snake.o tool/snake_client.o
+CFLAGS = -I./ -g -O2 -D_REENTRANT -Wall
+LIBS = -lncurses
 
-%.o: %.c $(DEPS)
-    $(CC) -c -o $@ $< $(CFLAGS)
+TOOL_OBJS = ./tool/server_component.c ./tool/server_component.h ./tool/snake_client.c ./tool/snake_client.h ./tool/snake_component.h ./tool/snake_server.c ./tool/snake_server.h
 
-snakegame: $(OBJ)
-    $(CC) -o $@ $^ $(CFLAGS)
+all: server_snake client_snake
 
-.PHONY: clean
+server_snake:	server_snake.c ${TOOL_OBJS}
+		${CC} ${CFLAGS} -o $@ $^ ${LIBS}
 
-clean:
-    rm -f $(OBJ) snakegame
+client_snake:	client_snake.c ${TOOL_OBJS}
+		${CC} ${CFLAGS} -o $@ $^ ${LIBS}
