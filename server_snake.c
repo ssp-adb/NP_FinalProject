@@ -9,6 +9,7 @@
 #include <sys/epoll.h>
 #include <errno.h>
 #include <unistd.h>
+#include <tool/snake_server.h>
 
 #define MAXLINE 512
 #define MAX_ID_LEN 50
@@ -44,7 +45,7 @@ void app_end(struct usr leave_usr, struct usr cli1, struct usr cli2){
                 strcpy(leave_msg, "(");
                 strcat(leave_msg, cli2.id);
                 strcat(leave_msg, " left the room)\n");
-                write(cli1.skt, leave_msg, strlen(leave_msg));
+                send(cli1.skt, leave_msg, strlen(leave_msg), 0);
                 shutdown(cli1.skt, SHUT_WR);
                 return;
             }
@@ -57,7 +58,7 @@ void app_end(struct usr leave_usr, struct usr cli1, struct usr cli2){
                 strcpy(leave_msg, "(");
                 strcat(leave_msg, cli1.id);
                 strcat(leave_msg, " left the room)\n");
-                write(cli2.skt, leave_msg, strlen(leave_msg));
+                send(cli2.skt, leave_msg, strlen(leave_msg), 0);
                 shutdown(cli2.skt, SHUT_WR);
                 return;
             }
@@ -65,13 +66,44 @@ void app_end(struct usr leave_usr, struct usr cli1, struct usr cli2){
     }
 }
 
-void chat(struct usr cli1, struct usr cli2) {
-    int epfd, connfd, n, maxfdp1;
-    fd_set rset;
-    char buf[MAXLINE], fir2sec_msg[1024], sec2fir_msg[1024];
-    char leave_msg[1024];
-    struct usr leave_usr;
-    int leaving = 0;
+typedef struct {
+    char data[ROW+1][COL+1];
+    int fruit_eaten;
+    int enemy_eaten;
+    int winner;
+} send_info;
+
+send_info *create_info(char dt[ROW+1][COL+1], int f_e, int e_e, int winner){
+    send_info *tmp_info = malloc(sizeof(send_info));
+    // copying data
+    for(int i = 0; i <= ROW; i++) {
+        for(int j = 0; j <= COL; j++) {
+            tmp_info->data[i][j] = dt[i][j];
+        }
+    }
+    tmp_info->fruit_eaten = f_e;
+    tmp_info->enemy_eaten = e_e;
+    tmp_info->winner = winner;
+
+    return tmp_info;
+}
+
+void snake_game(struct usr cli1, struct usr cli2){
+    // game initialize
+    srand(time(NULL));
+
+    int fruit_eaten_1 = 0, fruit_eaten_2 = 0;
+    int winner = 0;
+    char data[ROW+1][COL+1] = {0};
+    Snake snake1, snake2;
+
+    init_data(data);
+    Init_snake(&snake1, &snake2, data);
+
+    // communicate with clients
+    int epfd, connfd, n;
+    char input[MAXLINE];
+    send_info *cli1_info, *cli2_info;
 
     struct epoll_event ev;
     struct epoll_event *events = (struct epoll_event*) malloc(sizeof(struct epoll_event) * MAX_EVENTS);
@@ -86,56 +118,72 @@ void chat(struct usr cli1, struct usr cli2) {
     // 2nd client
     ev.data.fd = cli2.skt;
     epoll_ctl(epfd, EPOLL_CTL_ADD, cli2.skt, &ev);
-    for(;;){
-        int nfds = epoll_wait(epfd, events, MAX_EVENTS, -1);
-        for (int i = 0; i < nfds; i++){
-            connfd = events[i].data.fd;
-            if(events[i].events & EPOLLIN){
-                if(connfd == cli1.skt){ // 1st client
-                    n = read(cli1.skt, buf, MAX_ID_LEN);
-                    if(n == 0){
-                        sprintf(leave_msg, "(%s left the room. Press Ctrl+D to leave.)\n", cli1.id);
-                        
-                        // sending msg and FIN to another client
-                        write(cli2.skt, leave_msg, strlen(leave_msg));
-                        shutdown(cli2.skt, SHUT_WR);
-                        leave_usr = cli1;
-                        leaving = 1;
-                        break;
-                    }
-                    else if(n > 0){
-                        buf[n-1]=0;
-                        sprintf(fir2sec_msg, "(%s) %s", cli1.id, buf);
 
-                        write(cli2.skt, fir2sec_msg, strlen(fir2sec_msg));
+    // running server and game
+    while(!winner){ // if winner NOT come out yet
+        int nfds = epoll_wait(epfd, events, MAX_EVENTS, 100);
+        if(nfds < 0 && errno == EINTR) printf("timeout (0.1s)\n");
+        else{
+            for(int i = 0; i < nfds; i++){
+                connfd = events[i].data.fd;
+                if(events[i].events & EPOLLIN){
+                    if(connfd == cli1.skt){
+                        // get input (non blocking)
+                        if((n = recv(cli1.skt, input, MAXLINE, MSG_DONTWAIT)) <= 0){
+                            if(errno == EAGAIN || errno == EWOULDBLOCK){
+                                //non-blocking recv nothing, maintain original direction
+                                break; 
+                            }
+                            else if(n==0){
+                                //client 1 leaves game in other ways
+                                snake1.direction = 'q';
+                            }
+                        }
+                        else snake1.direction = get_input(input[0]);
                     }
-                }
-                else if(connfd == cli2.skt){ // 2nd client
-                    // check EOF (ctrl + D)
-                    n = read(cli2.skt, buf, MAX_ID_LEN);
-                    if(n == 0){
-                        sprintf(leave_msg, "(%s left the room. Press Ctrl+D to leave.)\n", cli2.id);
-                        
-                        // sending msg and FIN to another client
-                        write(cli1.skt, leave_msg, strlen(leave_msg));
-                        shutdown(cli1.skt, SHUT_WR);
-                        leave_usr = cli2;
-                        leaving = 1;
-                        break;
-                    }
-                    else if(n > 0){
-                        buf[n-1]=0;
-                        sprintf(sec2fir_msg, "(%s) %s", cli2.id, buf);
-
-                        write(cli1.skt, sec2fir_msg, strlen(sec2fir_msg));
+                    else if(connfd == cli2.skt){
+                        if((n = recv(cli2.skt, input, MAXLINE, MSG_DONTWAIT)) <= 0){
+                            if(errno == EAGAIN || errno == EWOULDBLOCK){
+                                //non-blocking recv nothing, maintain original direction
+                                break; 
+                            }
+                            else if(n==0){
+                                //client 1 leaves game in other ways
+                                snake2.direction = 'q';
+                            }
+                        }
+                        else snake2.direction = get_input(input[0]);
                     }
                 }
             }
         }
-        if(leaving) break;
+        if(snake1.direction == 'q' || snake2.direction == 'q'){
+            winner = 3;
+            break;
+        }
+        if((winner = update_snake(&snake1, &snake2, data)))
+            break;
+        if((winner = Check_win(&snake1, &snake2)))
+            break;
+        fruit_eaten_1 = snake1.length-3;
+        fruit_eaten_2 = snake2.length-3;
+
+        cli1_info = create_info(data, fruit_eaten_1, fruit_eaten_2, winner);
+        cli2_info = create_info(data, fruit_eaten_2, fruit_eaten_1, winner);
+        
+        // sending data to client
+        send(cli1.skt, (void *)cli1_info, sizeof(send_info), MSG_DONTWAIT);
+        send(cli2.skt, (void *)cli2_info, sizeof(send_info), MSG_DONTWAIT);
+
+        //usleep(100000);
     }
-    app_end(leave_usr, cli1, cli2);
-    return;
+
+    cli1_info = create_info(data, fruit_eaten_1, fruit_eaten_2, winner);
+    cli2_info = create_info(data, fruit_eaten_2, fruit_eaten_1, winner);
+
+    // blocking output
+    send(cli1.skt, (void *)cli1_info, sizeof(send_info), 0);
+    send(cli2.skt, (void *)cli2_info, sizeof(send_info), 0);
 }
 
 int main(int argc, char ** argv) {
@@ -202,8 +250,7 @@ int main(int argc, char ** argv) {
             for(i = 0; i < MAX_CLINETS; i++){
                 if(waiting_clients[i].skt < 0){
                     waiting_clients[i] = new_cli;
-                    write(waiting_clients[i].skt, "okay\n", 5);
-                    write(waiting_clients[i].skt, "okay\n", 5);
+                    send(waiting_clients[i].skt, "okay\n", 5, 0);
                     break;
                 }
             }
@@ -228,7 +275,8 @@ int main(int argc, char ** argv) {
             }
             
             if(FD_ISSET(sockfd, &rset)){
-				write(sockfd, "yes/no?\n", 8);
+				//write(sockfd, "yes/no?\n", 8);
+                // check YES or exit
                 if((n = read(sockfd, buf, MAXLINE)) == 0){ //connection reset
                     close(sockfd);
                     FD_CLR(sockfd, &allset);
@@ -236,27 +284,29 @@ int main(int argc, char ** argv) {
                 }
                 else{
                     buf[n]=0;
-                    if(strcmp(buf, "yes\n\n")==0){
-                        if(ready_cli.skt == -1){
+                    //printf("%s\n", buf);
+                    if(strcmp(buf, "yes\n")==0){
+                        if(ready_cli.skt == -1){ // first client has not come yet
                             ready_cli = waiting_clients[i];
                             waiting_clients[i].skt = -1;
 
                             // send first msg
-                            strcpy(usr_msg, "You are the 1st user. Wait for the second one!\n");
-                            write(ready_cli.skt, usr_msg, strlen(usr_msg));
+                            // strcpy(usr_msg, "You are the 1st user. Wait for the second one!\n");
+                            // send(ready_cli.skt, usr_msg, strlen(usr_msg), 0);
                         }
                         else{
-                            sprintf(usr_msg, "The second user is %s from %s\n", waiting_clients[i].id, waiting_clients[i].ip_addr);
-                            write(ready_cli.skt, usr_msg, strlen(usr_msg));
-                            // send second msg
-                            strcpy(usr_msg, "You are the 2nd user\n");
-                            write(waiting_clients[i].skt, usr_msg, strlen(usr_msg));
-                            sprintf(usr_msg, "The first user is %s from %s\n", ready_cli.id, ready_cli.ip_addr);
-                            write(waiting_clients[i].skt, usr_msg, strlen(usr_msg));
+                            // sprintf(usr_msg, "The second user is %s from %s\n", waiting_clients[i].id, waiting_clients[i].ip_addr);
+                            // send(ready_cli.skt, usr_msg, strlen(usr_msg), 0);
+                            // // send second msg
+                            // strcpy(usr_msg, "You are the 2nd user\n");
+                            // send(waiting_clients[i].skt, usr_msg, strlen(usr_msg), 0);
+                            // sprintf(usr_msg, "The first user is %s from %s\n", ready_cli.id, ready_cli.ip_addr);
+                            // send(waiting_clients[i].skt, usr_msg, strlen(usr_msg), 0);
 
                             if((childpid = fork()) == 0){ //child process
                                 close(listenfd);
-                                chat(ready_cli, waiting_clients[i]);
+                                snake_game(ready_cli, waiting_clients[i]);
+                                //chat(ready_cli, waiting_clients[i]);
 
                                 exit(0); // finish application
                             }

@@ -21,11 +21,11 @@
 typedef struct{
     char data[ROW+1][COL+1];
     int fruit_eaten;
-    int enimy_eaten;
+    int enemy_eaten;
     int winner;
 } send_info;
 
-send_info *self, *enemy;
+//send_info *self, *enemy;
 
 int main(int argc, char **argv){
     if (argc != 2){
@@ -63,7 +63,7 @@ int main(int argc, char **argv){
     send(sockfd, name, strlen(name), 0);
 
     sleep(1);
-    char buf[] = "yes";
+    char buf[] = "yes\n";
     send(sockfd, buf, strlen(buf), 0);
 
     char buff[1024];
@@ -71,7 +71,6 @@ int main(int argc, char **argv){
     recv(sockfd, buff, sizeof(buf), 0);
     printf("%s", buff);
     fflush(stdout);
-
     int tmp = rand()%4;
     char dir;
     switch (tmp)
@@ -94,11 +93,15 @@ int main(int argc, char **argv){
 
     init_screen();
 
+    send_info *self = malloc(sizeof(send_info));
+
     while(true){
         dir = get_input(dir);
-        recv(sockfd, self, sizeof(self), 0);
-        recv(sockfd, enemy, sizeof(enemy), 0);
-        draw(self->data, self->fruit_eaten, self->enimy_eaten);
+        char s[2] = {dir, '\0'};
+        send(sockfd, s, sizeof(s), 0);
+        recv(sockfd, self, sizeof(send_info), 0);
+        //recv(sockfd, enemy, sizeof(send_info), 0);
+        draw(self->data, self->fruit_eaten, self->enemy_eaten);
     }
     return 0;
 }
