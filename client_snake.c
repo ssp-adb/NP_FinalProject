@@ -81,19 +81,20 @@ int main(int argc, char **argv){
 
     //int tmp = rand()%4;
     char dir = (cli[0] == '1') ? 'd' : 'a';
+    int p;
     if(dir == 'd'){
-        printf("You are the first player, your snake is at left up side at beginning!\n");
+        p=1;
     }else{
-        printf("You are the second player, yor snake is at right down side at beginning!\n");
+        p=2;
     }
-    sleep(1);
+    sleep(2);
 
     init_screen();
     
     send_info *self = malloc(sizeof(send_info));
 
     recv(sockfd, self, sizeof(send_info), 0);
-    draw(self->data, self->fruit_eaten, self->enemy_eaten);
+    draw(self->data, self->fruit_eaten, self->enemy_eaten, p);
 
     while(true){
         dir = get_input(dir);
@@ -103,7 +104,7 @@ int main(int argc, char **argv){
         if (self->winner !=0){
             break;
         }
-        draw(self->data, self->fruit_eaten, self->enemy_eaten);
+        draw(self->data, self->fruit_eaten, self->enemy_eaten, p);
     }
     int status = self->winner;
     if (status == 1 and cli[0]=='1'){
