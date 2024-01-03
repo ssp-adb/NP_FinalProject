@@ -86,7 +86,7 @@ int main(int argc, char **argv){
         printf("You are the first player, your snake is at left up side at beginning!\n");
         p=1;
     }else{
-        printf("You are the second player, yor snake is at right down side at beginning!\n");
+        printf("You are the second player, your snake is at right down side at beginning!\n");
         p=2;
     }
     sleep(2);
