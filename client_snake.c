@@ -103,10 +103,10 @@ int main(int argc, char **argv){
         send(sockfd, &dir, sizeof(dir), MSG_DONTWAIT);
 
         recv(sockfd, self, sizeof(send_info), 0);
+        draw(self->data, self->fruit_eaten, self->enemy_eaten, p);
         if (self->winner !=0){
             break;
         }
-        draw(self->data, self->fruit_eaten, self->enemy_eaten, p);
     }
     int status = self->winner;
     if (status == 1 and cli[0]=='1'){
