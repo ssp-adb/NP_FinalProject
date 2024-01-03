@@ -66,50 +66,33 @@ int main(int argc, char **argv){
     char buf[] = "yes\n";
     send(sockfd, buf, strlen(buf), 0);
 
-    char buff[1024];
-    memset(buff, 0, sizeof(buf));
-    recv(sockfd, buff, sizeof(buf), 0);
-    printf("%s", buff);
+    char cli[10];
+    recv(sockfd, cli, sizeof(cli), 0);
+    printf("%s\n", cli);
     fflush(stdout);
+    // char buff[1024];
+    // memset(buff, 0, sizeof(buf));
+    // recv(sockfd, buff, sizeof(buf), 0);
+    // printf("%s", buff);
+    // fflush(stdout);
 
-    int tmp = rand()%4;
-    char dir;
-    switch (tmp)
-    {
-    case 0:
-        dir = 'w';
-        break;
-    case 1:
-        dir = 'a';
-        break;
-    case 2:
-        dir = 's';
-        break;
-    case 3:
-        dir = 'd';
-        break;
-    default:
-        break;
-    }
+    //int tmp = rand()%4;
+    char dir = (cli[0] == '1') ? 'd' : 'a';
 
-    //init_screen();
-
+    init_screen();
+    
     send_info *self = malloc(sizeof(send_info));
 
-    // recv(sockfd, self, sizeof(send_info), 0);
-    // draw(self->data, self->fruit_eaten, self->enemy_eaten);
-    char *input = malloc(sizeof(char) * 10);
-    while(true){
-        dir = 's';
-        //dir = get_input(dir);
-        input[0] = dir;
-        send(sockfd, input, sizeof(input), 0);
-        printf("sent\n");
-        recv(sockfd, self, sizeof(send_info), 0);
-        printf("recv\n");
-        //recv(sockfd, enemy, sizeof(send_info), 0);
-        //draw(self->data, self->fruit_eaten, self->enemy_eaten);
-    }
+    recv(sockfd, self, sizeof(send_info), 0);
+    draw(self->data, self->fruit_eaten, self->enemy_eaten);
 
-    //return 0;
+    while(true){
+        dir = get_input(dir);
+        send(sockfd, &dir, sizeof(dir), MSG_DONTWAIT);
+
+        recv(sockfd, self, sizeof(send_info), 0);
+
+        draw(self->data, self->fruit_eaten, self->enemy_eaten);
+    }
+    return 0;
 }
