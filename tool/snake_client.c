@@ -157,11 +157,12 @@ void draw_game_over(int game_over_type) {
 	else if(game_over_type == -2)
 		mvprintw(27, 48, "You lose!");
 
-    mvprintw(28, 48, "Press any key to exit...");
+    mvprintw(28, 48, "Press 'q' to exit...");
 	attroff(COLOR_PAIR(GAME_OVER_COLOR));
 	refresh();
 	// block until user input
 	nodelay(stdscr, FALSE);
-	getch();
+	while(getch() != 'q')
+		;
 	endwin();
 }
