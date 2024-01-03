@@ -89,7 +89,7 @@ int main(int argc, char **argv){
         printf("You are the second player, your snake is at right down side at beginning!\n");
         p=2;
     }
-    sleep(2);
+    //sleep(2);
 
     init_screen();
     
