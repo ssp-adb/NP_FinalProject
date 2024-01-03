@@ -82,9 +82,9 @@ int main(int argc, char **argv){
     //int tmp = rand()%4;
     char dir = (cli[0] == '1') ? 'd' : 'a';
     if(dir == 'd'){
-        printf("You are the first player, you can start the game!\n");
+        printf("You are the first player, your snake is at left up side at beginning!\n");
     }else{
-        printf("You are the second player, you can start the game!\n");
+        printf("You are the second player, yor snake is at right down side at beginning!\n");
     }
     sleep(1);
 
