@@ -139,7 +139,7 @@ void snake_game(struct usr cli1, struct usr cli2){
                                 snake1.direction = 'q';
                             }
                         }
-                        else snake1.direction = get_input(input[0]);
+                        else snake1.direction = input[0];
                     }
                     else if(connfd == cli2.skt){
                         if((n = recv(cli2.skt, input, MAXLINE, MSG_DONTWAIT)) <= 0){
@@ -152,7 +152,7 @@ void snake_game(struct usr cli1, struct usr cli2){
                                 snake2.direction = 'q';
                             }
                         }
-                        else snake2.direction = get_input(input[0]);
+                        else snake2.direction = input[0];
                     }
                 }
             }
@@ -173,7 +173,7 @@ void snake_game(struct usr cli1, struct usr cli2){
         fruit_eaten_2 = snake2.length-3;
 
         cli1_info = create_info(data, fruit_eaten_1, fruit_eaten_2, winner);
-        cli2_info = create_info(data, fruit_eaten_2, fruit_eaten_1, winner);
+        cli2_info = create_info(data, fruit_eaten_1, fruit_eaten_2, winner);
         
         // sending data to client
         send(cli1.skt, (void *)cli1_info, sizeof(send_info), MSG_DONTWAIT);
@@ -183,7 +183,7 @@ void snake_game(struct usr cli1, struct usr cli2){
     }
 
     cli1_info = create_info(data, fruit_eaten_1, fruit_eaten_2, winner);
-    cli2_info = create_info(data, fruit_eaten_2, fruit_eaten_1, winner);
+    cli2_info = create_info(data, fruit_eaten_1, fruit_eaten_2, winner);
 
     // blocking output
     send(cli1.skt, (void *)cli1_info, sizeof(send_info), 0);

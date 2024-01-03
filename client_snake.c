@@ -18,6 +18,9 @@
 
 #include "tool/snake_client.h"
 
+#define and &&
+#define or ||
+
 typedef struct{
     char data[ROW+1][COL+1];
     int fruit_eaten;
@@ -33,7 +36,7 @@ int main(int argc, char **argv){
         exit(1);
     }
     srand(time(NULL));
-
+    
     printf("Welcome to snake game!\nPlease input your name: ");
     char name[50];
     memset(name, 0, sizeof(name));
@@ -78,21 +81,44 @@ int main(int argc, char **argv){
 
     //int tmp = rand()%4;
     char dir = (cli[0] == '1') ? 'd' : 'a';
+    int p;
+    if(dir == 'd'){
+        printf("You are the first player, your snake is at left up side at beginning!\n");
+        p=1;
+    }else{
+        printf("You are the second player, your snake is at right down side at beginning!\n");
+        p=2;
+    }
+    sleep(2);
 
     init_screen();
     
     send_info *self = malloc(sizeof(send_info));
 
     recv(sockfd, self, sizeof(send_info), 0);
-    draw(self->data, self->fruit_eaten, self->enemy_eaten);
+    draw(self->data, self->fruit_eaten, self->enemy_eaten, p);
 
     while(true){
         dir = get_input(dir);
         send(sockfd, &dir, sizeof(dir), MSG_DONTWAIT);
 
         recv(sockfd, self, sizeof(send_info), 0);
-
-        draw(self->data, self->fruit_eaten, self->enemy_eaten);
+        if (self->winner !=0){
+            break;
+        }
+        draw(self->data, self->fruit_eaten, self->enemy_eaten, p);
+    }
+    int status = self->winner;
+    if (status == 1 and cli[0]=='1'){
+        draw_game_over(-1);
+    }else if (status == 1 and cli[0]=='2'){
+        draw_game_over(-2);
+    }else if (status == 2 and cli[0]=='1'){
+        draw_game_over(-2);
+    }else if (status == 2 and cli[0]=='2'){
+        draw_game_over(-1);
+    }else if (status == 3){
+        draw_game_over(-3);
     }
     return 0;
 }

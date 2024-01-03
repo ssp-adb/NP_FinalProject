@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <ncurses.h>
 
-#define ROW 35
+#define ROW 33
 #define COL 51
 #define MAX_SNAKE_LENGTH 123
 
