@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "*.cpp": "cpp",
-        "snake_client.h": "c"
+        "snake_client.h": "c",
+        "stdio.h": "c",
+        "stdlib.h": "c"
     }
 }

@@ -18,6 +18,9 @@
 
 #include "tool/snake_client.h"
 
+#define and &&
+#define or ||
+
 typedef struct{
     char data[ROW+1][COL+1];
     int fruit_eaten;
@@ -33,7 +36,7 @@ int main(int argc, char **argv){
         exit(1);
     }
     srand(time(NULL));
-
+    
     printf("Welcome to snake game!\nPlease input your name: ");
     char name[50];
     memset(name, 0, sizeof(name));
@@ -102,6 +105,17 @@ int main(int argc, char **argv){
         }
         draw(self->data, self->fruit_eaten, self->enemy_eaten);
     }
-    draw_game_over(self->winner);
+    int status = self->winner;
+    if (status == 1 and cli[0]=='1'){
+        draw_game_over(-1);
+    }else if (status == 1 and cli[0]=='2'){
+        draw_game_over(-2);
+    }else if (status == 2 and cli[0]=='1'){
+        draw_game_over(-2);
+    }else if (status == 2 and cli[0]=='2'){
+        draw_game_over(-1);
+    }else if (status == 3){
+        draw_game_over(-3);
+    }
     return 0;
 }
