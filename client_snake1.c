@@ -82,17 +82,6 @@ int main(int argc, char **argv){
     recv(sockfd, self, sizeof(send_info), 0);
     draw(self->data, self->fruit_eaten, self->enemy_eaten);
 
-    /*if(pid == 0) {
-        while(true){
-            dir = get_input(dir);
-            send(sockfd, &dir, sizeof(dir), 0);
-        }
-    } else {
-        while(true){
-            recv(sockfd, self, sizeof(send_info), 0);
-            draw(self->data, self->fruit_eaten, self->enemy_eaten);
-        }
-    }*/
     while(true){
         dir = get_input(dir);
         send(sockfd, &dir, sizeof(dir), MSG_DONTWAIT);
