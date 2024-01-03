@@ -34,7 +34,7 @@ char get_input(char last) {
     while(1) {
         input = getch();
         if(input == ERR) // no input 
-            return 'N';
+            return last;
         else if(input != last) { // input set a new direction
             if((input == 'a' && last != 'd') 
 				|| (input == 'w' && last != 's')
