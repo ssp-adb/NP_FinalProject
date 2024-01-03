@@ -47,7 +47,7 @@ char get_input(char last) {
     }
 }
 
-void draw(char data[][COL+1], int fruit_eaten, int enemy_fruit_eaten) {
+void draw(char data[][COL+1], int fruit_eaten1, int fruit_eaten2, int player) {
 	//clear vscreen
 	clear();
 
@@ -62,18 +62,48 @@ void draw(char data[][COL+1], int fruit_eaten, int enemy_fruit_eaten) {
 	printw("Eat 120 fruits first\n");
 	attroff(COLOR_PAIR(T_RED));
 
-	// print "Fruits eaten: %d\n"
+	// print "You are       \n"
+	printw("You are ");
+	if(player == 1) {
+		attron(COLOR_PAIR(GREEN));
+		printw("    ");
+		attron(COLOR_PAIR(BLUE));
+		printw("  \n");
+		attroff(COLOR_PAIR(BLUE));
+	} else {
+		attron(COLOR_PAIR(YELLOW));
+		printw("    ");
+		attron(COLOR_PAIR(CYAN));
+		printw("  \n");
+		attroff(COLOR_PAIR(CYAN));
+	}
+
+	printw("\n");
+
+	// print "       Fruits eaten: %d\n"
+	attron(COLOR_PAIR(GREEN));
+	printw("    ");
+	attron(COLOR_PAIR(BLUE));
+	printw("  ");
+	attroff(COLOR_PAIR(BLUE));
+	printw(" ");
 	attron(COLOR_PAIR(T_WHITE));
 	printw("Fruits eaten: ");
 	attron(COLOR_PAIR(T_RED));
-	printw("%d\n", fruit_eaten);
+	printw("%d\n", fruit_eaten1);
 	attroff(COLOR_PAIR(T_RED));
 
-	// print "Enemy's Fruits eaten: %d\n"
+	// print "       Fruits eaten: %d\n"
+	attron(COLOR_PAIR(YELLOW));
+	printw("    ");
+	attron(COLOR_PAIR(CYAN));
+	printw("  ");
+	attroff(COLOR_PAIR(CYAN));
+	printw(" ");
 	attron(COLOR_PAIR(T_WHITE));
-	printw("Enemy's Fruits eaten: ");
+	printw("Fruits eaten: ");
 	attron(COLOR_PAIR(T_RED));
-	printw("%d\n", enemy_fruit_eaten);
+	printw("%d\n", fruit_eaten2);
 	attroff(COLOR_PAIR(T_RED));
 
 	// print Game board
