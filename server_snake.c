@@ -157,8 +157,12 @@ void snake_game(struct usr cli1, struct usr cli2){
                 }
             }
         }
-        if(snake1.direction == 'q' || snake2.direction == 'q'){
-            winner = 3;
+        if(snake1.direction == 'q'){
+            winner = 2;
+            break;
+        }
+        if(snake2.direction == 'q'){
+            winner = 1;
             break;
         }
         if((winner = update_snake(&snake1, &snake2, data)))
@@ -193,7 +197,7 @@ int main(int argc, char ** argv) {
     pid_t childpid;
     socklen_t clilen;
     struct sockaddr_in cliaddr, servaddr;
-    char usr_msg[1024], buf[MAXLINE];
+    char buf[MAXLINE];
     //time_t ticks;
     // FILE * fp;
     struct usr new_cli;
@@ -275,7 +279,6 @@ int main(int argc, char ** argv) {
             }
             
             if(FD_ISSET(sockfd, &rset)){
-				//write(sockfd, "yes/no?\n", 8);
                 // check YES or exit
                 if((n = read(sockfd, buf, MAXLINE)) == 0){ //connection reset
                     close(sockfd);
@@ -284,7 +287,6 @@ int main(int argc, char ** argv) {
                 }
                 else{
                     buf[n]=0;
-                    //printf("%s\n", buf);
                     if(strcmp(buf, "yes\n")==0){
                         if(ready_cli.skt == -1){ // first client has not come yet
                             ready_cli = waiting_clients[i];
@@ -292,21 +294,10 @@ int main(int argc, char ** argv) {
 
                             // send first msg
                             send(ready_cli.skt, "1", 1, 0);
-
-                            // strcpy(usr_msg, "You are the 1st user. Wait for the second one!\n");
-                            // send(ready_cli.skt, usr_msg, strlen(usr_msg), 0);
                         }
                         else{
-                            // sprintf(usr_msg, "The second user is %s from %s\n", waiting_clients[i].id, waiting_clients[i].ip_addr);
-                            // send(ready_cli.skt, usr_msg, strlen(usr_msg), 0);
-
                             // send second msg
                             send(waiting_clients[i].skt, "2", 1, 0);
-
-                            // strcpy(usr_msg, "You are the 2nd user\n");
-                            // send(waiting_clients[i].skt, usr_msg, strlen(usr_msg), 0);
-                            // sprintf(usr_msg, "The first user is %s from %s\n", ready_cli.id, ready_cli.ip_addr);
-                            // send(waiting_clients[i].skt, usr_msg, strlen(usr_msg), 0);
 
                             if((childpid = fork()) == 0){ //child process
                                 close(listenfd);
