@@ -73,7 +73,7 @@ int main(int argc, char **argv){
     fflush(stdout);
 
     int tmp = rand()%4;
-    char dir = 'd';
+    char dir = 'a';
 
     init_screen();
     
@@ -90,7 +90,6 @@ int main(int argc, char **argv){
     } else {
         while(true){
             recv(sockfd, self, sizeof(send_info), 0);
-
             draw(self->data, self->fruit_eaten, self->enemy_eaten);
         }
     }*/

@@ -175,7 +175,7 @@ void snake_game(struct usr cli1, struct usr cli2){
         send(cli1.skt, (void *)cli1_info, sizeof(send_info), MSG_DONTWAIT);
         send(cli2.skt, (void *)cli2_info, sizeof(send_info), MSG_DONTWAIT);
 
-        //usleep(100000);
+        usleep(120000);
     }
 
     cli1_info = create_info(data, fruit_eaten_1, fruit_eaten_2, winner);
