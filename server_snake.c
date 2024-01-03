@@ -33,38 +33,38 @@ struct usr {
 
 struct usr waiting_clients[MAX_CLINETS];
 
-void app_end(struct usr leave_usr, struct usr cli1, struct usr cli2){
-    int n;
-    char buf[MAXLINE], leave_msg[MAXLINE];
+// void app_end(struct usr leave_usr, struct usr cli1, struct usr cli2){
+//     int n;
+//     char buf[MAXLINE], leave_msg[MAXLINE];
 
-    // dealing with ctrl+D ending process
-    if(leave_usr.skt == cli1.skt){
-        for(;;){
-            n = read(cli2.skt, buf, MAXLINE);
-            if(n == 0){
-                strcpy(leave_msg, "(");
-                strcat(leave_msg, cli2.id);
-                strcat(leave_msg, " left the room)\n");
-                send(cli1.skt, leave_msg, strlen(leave_msg), 0);
-                shutdown(cli1.skt, SHUT_WR);
-                return;
-            }
-        }
-    }
-    else{
-        for(;;){
-            n = read(cli1.skt, buf, MAXLINE);
-            if(n == 0){
-                strcpy(leave_msg, "(");
-                strcat(leave_msg, cli1.id);
-                strcat(leave_msg, " left the room)\n");
-                send(cli2.skt, leave_msg, strlen(leave_msg), 0);
-                shutdown(cli2.skt, SHUT_WR);
-                return;
-            }
-        }
-    }
-}
+//     // dealing with ctrl+D ending process
+//     if(leave_usr.skt == cli1.skt){
+//         for(;;){
+//             n = read(cli2.skt, buf, MAXLINE);
+//             if(n == 0){
+//                 strcpy(leave_msg, "(");
+//                 strcat(leave_msg, cli2.id);
+//                 strcat(leave_msg, " left the room)\n");
+//                 send(cli1.skt, leave_msg, strlen(leave_msg), 0);
+//                 shutdown(cli1.skt, SHUT_WR);
+//                 return;
+//             }
+//         }
+//     }
+//     else{
+//         for(;;){
+//             n = read(cli1.skt, buf, MAXLINE);
+//             if(n == 0){
+//                 strcpy(leave_msg, "(");
+//                 strcat(leave_msg, cli1.id);
+//                 strcat(leave_msg, " left the room)\n");
+//                 send(cli2.skt, leave_msg, strlen(leave_msg), 0);
+//                 shutdown(cli2.skt, SHUT_WR);
+//                 return;
+//             }
+//         }
+//     }
+// }
 
 typedef struct {
     char data[ROW+1][COL+1];
@@ -121,13 +121,19 @@ void snake_game(struct usr cli1, struct usr cli2){
 
     // running server and game
     while(!winner){ // if winner NOT come out yet
-        int nfds = epoll_wait(epfd, events, MAX_EVENTS, 100);
-        if(nfds < 0 && errno == EINTR) printf("timeout (0.1s)\n");
+        printf("enter winner\n");
+        int nfds = epoll_wait(epfd, events, MAX_EVENTS, -1);
+        if(nfds < 0 && errno == EINTR) printf("timeout (1s)\n");
         else{
+            if(errno != EINTR) printf("ERROR! %d\n", errno);
+
+            printf("epoll\n");
+            printf("nfds: %d\n",nfds);
             for(int i = 0; i < nfds; i++){
                 connfd = events[i].data.fd;
                 if(events[i].events & EPOLLIN){
                     if(connfd == cli1.skt){
+                        printf("client1\n");
                         // get input (non blocking)
                         if((n = recv(cli1.skt, input, MAXLINE, MSG_DONTWAIT)) <= 0){
                             if(errno == EAGAIN || errno == EWOULDBLOCK){
@@ -139,9 +145,11 @@ void snake_game(struct usr cli1, struct usr cli2){
                                 snake1.direction = 'q';
                             }
                         }
-                        else snake1.direction = get_input(input[0]);
+                        else snake1.direction = input[0];
+                        printf("%s\n",input);
                     }
                     else if(connfd == cli2.skt){
+                        printf("client2\n");
                         if((n = recv(cli2.skt, input, MAXLINE, MSG_DONTWAIT)) <= 0){
                             if(errno == EAGAIN || errno == EWOULDBLOCK){
                                 //non-blocking recv nothing, maintain original direction
@@ -152,7 +160,7 @@ void snake_game(struct usr cli1, struct usr cli2){
                                 snake2.direction = 'q';
                             }
                         }
-                        else snake2.direction = get_input(input[0]);
+                        else snake2.direction = input[0];
                     }
                 }
             }
@@ -167,16 +175,19 @@ void snake_game(struct usr cli1, struct usr cli2){
             break;
         fruit_eaten_1 = snake1.length-3;
         fruit_eaten_2 = snake2.length-3;
+        printf("winner: %d\n",winner);
 
         cli1_info = create_info(data, fruit_eaten_1, fruit_eaten_2, winner);
         cli2_info = create_info(data, fruit_eaten_2, fruit_eaten_1, winner);
         
         // sending data to client
-        send(cli1.skt, (void *)cli1_info, sizeof(send_info), MSG_DONTWAIT);
-        send(cli2.skt, (void *)cli2_info, sizeof(send_info), MSG_DONTWAIT);
+        send(cli1.skt, (void *) cli1_info, sizeof(send_info), MSG_DONTWAIT);
+        send(cli2.skt, (void *) cli2_info, sizeof(send_info), MSG_DONTWAIT);
+        printf("server sent\n");
 
         //usleep(100000);
     }
+    printf("winner: %d\n",winner);
 
     cli1_info = create_info(data, fruit_eaten_1, fruit_eaten_2, winner);
     cli2_info = create_info(data, fruit_eaten_2, fruit_eaten_1, winner);

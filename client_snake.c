@@ -92,16 +92,24 @@ int main(int argc, char **argv){
         break;
     }
 
-    init_screen();
+    //init_screen();
 
     send_info *self = malloc(sizeof(send_info));
 
+    // recv(sockfd, self, sizeof(send_info), 0);
+    // draw(self->data, self->fruit_eaten, self->enemy_eaten);
+    char *input = malloc(sizeof(char) * 10);
     while(true){
-        dir = get_input(dir);
+        dir = 's';
+        //dir = get_input(dir);
+        input[0] = dir;
+        send(sockfd, input, sizeof(input), 0);
+        printf("sent\n");
         recv(sockfd, self, sizeof(send_info), 0);
+        printf("recv\n");
         //recv(sockfd, enemy, sizeof(send_info), 0);
-        draw(self->data, self->fruit_eaten, self->enemy_eaten);
+        //draw(self->data, self->fruit_eaten, self->enemy_eaten);
     }
-    return 0;
-}
 
+    //return 0;
+}
